@@ -1,11 +1,11 @@
-// src/App.jsx
 import { BrowserRouter, Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom'
 import { useEffect } from 'react'
 import LoginPage     from './pages/LoginPage'
 import DashboardPage from './pages/DashboardPage'
 import MeetingsPage  from './pages/MeetingsPage'
 import TickerPage    from './pages/TickerPage'
-import PrivateRoute  from './components/PrivateRoute'
+import PrivateRoute  from './Components/PrivateRoute'
+import Navbar        from './Components/Navbar'
 
 function OAuthCallback() {
   const navigate = useNavigate()
@@ -23,7 +23,16 @@ function OAuthCallback() {
       navigate('/login', { replace: true })
     }
   }, [])
-  return <p style={{ padding:40, textAlign:'center', color:'#64748B' }}>Signing you in…</p>
+  return <p style={{ padding: 40, textAlign: 'center', color: '#64748B' }}>Signing you in…</p>
+}
+
+function AuthLayout({ children }) {
+  return (
+    <>
+      <Navbar />
+      {children}
+    </>
+  )
 }
 
 export default function App() {
@@ -32,9 +41,9 @@ export default function App() {
       <Routes>
         <Route path="/login"           element={<LoginPage />} />
         <Route path="/oauth2/callback" element={<OAuthCallback />} />
-        <Route path="/dashboard"       element={<PrivateRoute><DashboardPage /></PrivateRoute>} />
-        <Route path="/meetings"        element={<PrivateRoute><MeetingsPage /></PrivateRoute>} />
-        <Route path="/ticker"          element={<PrivateRoute><TickerPage /></PrivateRoute>} />
+        <Route path="/dashboard"       element={<PrivateRoute><AuthLayout><DashboardPage /></AuthLayout></PrivateRoute>} />
+        <Route path="/meetings"        element={<PrivateRoute><AuthLayout><MeetingsPage /></AuthLayout></PrivateRoute>} />
+        <Route path="/ticker"          element={<PrivateRoute><AuthLayout><TickerPage /></AuthLayout></PrivateRoute>} />
         <Route path="*"               element={<Navigate to="/dashboard" replace />} />
       </Routes>
     </BrowserRouter>
