@@ -87,7 +87,10 @@ export default function LoginPage() {
           </div>
 
           <button
-            onClick={() => window.location.href = '/oauth2/authorization/google'}
+            onClick={() => {
+              const apiBase = (import.meta.env.VITE_API_URL || 'http://localhost:8080/api').replace('/api', '')
+              window.location.href = `${apiBase}/oauth2/authorization/google`
+            }}
             className="w-full flex items-center justify-center gap-3 py-3 border border-gray-200 rounded-xl text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
           >
             <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" width={18} alt=""/>
