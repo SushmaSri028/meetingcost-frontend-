@@ -4,9 +4,8 @@ import LoginPage     from './pages/LoginPage'
 import DashboardPage from './pages/DashboardPage'
 import MeetingsPage  from './pages/MeetingsPage'
 import TickerPage    from './pages/TickerPage'
-import PrivateRoute  from './Components/PrivateRoute'
-import Navbar        from './Components/Navbar'
-
+import PrivateRoute  from './components/PrivateRoute'
+import Navbar        from './components/Navbar'
 function OAuthCallback() {
   const navigate = useNavigate()
   const location = useLocation()
