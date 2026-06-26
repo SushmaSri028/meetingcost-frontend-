@@ -1,11 +1,13 @@
 import { useEffect, useState } from "react"
 import { useNavigate } from "react-router-dom"
-import { getStats, syncCalendar } from "../api/meetings"
+import { getStats, syncCalendar, syncOutlookCalendar } from "../api/meetings"
 
 export default function DashboardPage() {
   const [stats, setStats] = useState(null)
   const [syncing, setSyncing] = useState(false)
   const [syncMsg, setSyncMsg] = useState("")
+  const [syncingOutlook, setSyncingOutlook] = useState(false)
+  const [outlookMsg, setOutlookMsg] = useState("")
   const [loading, setLoading] = useState(true)
   const navigate = useNavigate()
   const user = JSON.parse(localStorage.getItem("user") || "{}")
@@ -29,6 +31,28 @@ export default function DashboardPage() {
       setSyncMsg("Sync failed. Please try again.")
     } finally {
       setSyncing(false)
+    }
+  }
+
+  const handleOutlookSync = async () => {
+    setSyncingOutlook(true)
+    setOutlookMsg("")
+    try {
+      const res = await syncOutlookCalendar()
+      setOutlookMsg(res.message || "Outlook calendar synced!")
+      const updated = await getStats()
+      setStats(updated)
+    } catch (err) {
+      const msg = err?.response?.data?.message || "Outlook sync failed."
+      if (msg.includes("No Microsoft account")) {
+        setOutlookMsg("No Microsoft account connected. Please sign in with Microsoft first.")
+      } else if (msg.includes("expired")) {
+        setOutlookMsg("Microsoft session expired. Please sign out and sign in with Microsoft again.")
+      } else {
+        setOutlookMsg(msg)
+      }
+    } finally {
+      setSyncingOutlook(false)
     }
   }
 
@@ -114,7 +138,7 @@ export default function DashboardPage() {
         </div>
 
         {/* Action cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mb-8">
 
           {/* Sync card */}
           <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm">
@@ -147,6 +171,51 @@ export default function DashboardPage() {
                 {syncMsg && (
                   <p className={`text-xs mt-3 ${syncMsg.includes("failed") ? "text-red-500" : "text-emerald-600"}`}>
                     {syncMsg}
+                  </p>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Outlook sync card */}
+          <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm">
+            <div className="flex items-start gap-4">
+              <div className="w-10 h-10 bg-slate-50 rounded-xl flex items-center justify-center shrink-0">
+                {/* Microsoft Windows logo */}
+                <svg width="20" height="20" viewBox="0 0 21 21" xmlns="http://www.w3.org/2000/svg">
+                  <rect x="1"  y="1"  width="9" height="9" fill="#F25022"/>
+                  <rect x="11" y="1"  width="9" height="9" fill="#7FBA00"/>
+                  <rect x="1"  y="11" width="9" height="9" fill="#00A4EF"/>
+                  <rect x="11" y="11" width="9" height="9" fill="#FFB900"/>
+                </svg>
+              </div>
+              <div className="flex-1 min-w-0">
+                <h3 className="font-semibold text-slate-900 text-sm mb-1">Sync Outlook Calendar</h3>
+                <p className="text-xs text-slate-500 leading-relaxed mb-4">
+                  Pull meetings from Microsoft Outlook / Microsoft 365 via your connected Microsoft account.
+                </p>
+                <button
+                  onClick={handleOutlookSync}
+                  disabled={syncingOutlook}
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-slate-700 hover:bg-slate-800 disabled:bg-slate-400 text-white text-xs font-medium rounded-lg transition-colors duration-150"
+                >
+                  {syncingOutlook ? (
+                    <>
+                      <svg className="animate-spin h-3.5 w-3.5" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+                      </svg>
+                      Syncing Outlook...
+                    </>
+                  ) : "Sync Outlook"}
+                </button>
+                {outlookMsg && (
+                  <p className={`text-xs mt-3 leading-relaxed ${
+                    outlookMsg.includes("failed") || outlookMsg.includes("expired") || outlookMsg.includes("No Microsoft")
+                      ? "text-amber-600"
+                      : "text-emerald-600"
+                  }`}>
+                    {outlookMsg}
                   </p>
                 )}
               </div>
@@ -206,3 +275,4 @@ function getGreeting() {
   if (h < 17) return "afternoon"
   return "evening"
 }
+s

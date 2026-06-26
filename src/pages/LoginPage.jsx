@@ -34,9 +34,14 @@ export default function LoginPage() {
     }
   }
 
+  const apiBase = (import.meta.env.VITE_API_URL || "http://localhost:8080/api").replace("/api", "")
+
   const handleGoogle = () => {
-    const apiBase = (import.meta.env.VITE_API_URL || "http://localhost:8080/api").replace("/api", "")
     window.location.href = `${apiBase}/oauth2/authorization/google`
+  }
+
+  const handleMicrosoft = () => {
+    window.location.href = `${apiBase}/oauth2/authorization/microsoft`
   }
 
   return (
@@ -55,12 +60,12 @@ export default function LoginPage() {
             Know what every meeting<br />actually costs.
           </h1>
           <p className="text-blue-200 text-lg leading-relaxed mb-10">
-            Connect your Google Calendar, sync your meetings, and watch the real dollar cost tick up in real time.
+            Connect your Google or Microsoft calendar, sync your meetings, and watch the real dollar cost tick up in real time.
           </p>
 
           <div className="space-y-4">
             {[
-              { icon: "📅", text: "Sync directly from Google Calendar" },
+              { icon: "📅", text: "Sync from Google Calendar or Outlook" },
               { icon: "⚡", text: "Live cost ticker via WebSocket" },
               { icon: "📊", text: "Analytics across all your meetings" },
             ].map((item) => (
@@ -103,19 +108,39 @@ export default function LoginPage() {
               : "Start tracking your meeting costs today"}
           </p>
 
-          {/* Google OAuth button */}
-          <button
-            onClick={handleGoogle}
-            className="w-full flex items-center justify-center gap-3 py-2.5 px-4 border border-slate-200 rounded-lg text-sm font-medium text-slate-700 bg-white hover:bg-slate-50 hover:border-slate-300 transition-all duration-150 shadow-sm mb-6"
-          >
-            <svg width="18" height="18" viewBox="0 0 18 18">
-              <path fill="#4285F4" d="M16.51 8H8.98v3h4.3c-.18 1-.74 1.48-1.6 2.04v2.01h2.6a7.8 7.8 0 0 0 2.38-5.88c0-.57-.05-.66-.15-1.18z"/>
-              <path fill="#34A853" d="M8.98 17c2.16 0 3.97-.72 5.3-1.94l-2.6-2.01c-.72.48-1.63.77-2.7.77a4.83 4.83 0 0 1-4.56-3.33H1.73v2.07A8 8 0 0 0 8.98 17z"/>
-              <path fill="#FBBC05" d="M4.42 10.49a4.84 4.84 0 0 1 0-3.09V5.33H1.73a8.02 8.02 0 0 0 0 7.23l2.69-2.07z"/>
-              <path fill="#EA4335" d="M8.98 3.58c1.22 0 2.3.42 3.16 1.24l2.37-2.37A8 8 0 0 0 1.73 5.33l2.69 2.07a4.83 4.83 0 0 1 4.56-3.82z"/>
-            </svg>
-            Continue with Google
-          </button>
+          {/* OAuth buttons */}
+          <div className="space-y-3 mb-6">
+            {/* Google */}
+            <button
+              onClick={handleGoogle}
+              type="button"
+              className="w-full flex items-center justify-center gap-3 py-2.5 px-4 border border-slate-200 rounded-lg text-sm font-medium text-slate-700 bg-white hover:bg-slate-50 hover:border-slate-300 transition-all duration-150 shadow-sm"
+            >
+              <svg width="18" height="18" viewBox="0 0 18 18">
+                <path fill="#4285F4" d="M16.51 8H8.98v3h4.3c-.18 1-.74 1.48-1.6 2.04v2.01h2.6a7.8 7.8 0 0 0 2.38-5.88c0-.57-.05-.66-.15-1.18z"/>
+                <path fill="#34A853" d="M8.98 17c2.16 0 3.97-.72 5.3-1.94l-2.6-2.01c-.72.48-1.63.77-2.7.77a4.83 4.83 0 0 1-4.56-3.33H1.73v2.07A8 8 0 0 0 8.98 17z"/>
+                <path fill="#FBBC05" d="M4.42 10.49a4.84 4.84 0 0 1 0-3.09V5.33H1.73a8.02 8.02 0 0 0 0 7.23l2.69-2.07z"/>
+                <path fill="#EA4335" d="M8.98 3.58c1.22 0 2.3.42 3.16 1.24l2.37-2.37A8 8 0 0 0 1.73 5.33l2.69 2.07a4.83 4.83 0 0 1 4.56-3.82z"/>
+              </svg>
+              Continue with Google
+            </button>
+
+            {/* Microsoft */}
+            <button
+              onClick={handleMicrosoft}
+              type="button"
+              className="w-full flex items-center justify-center gap-3 py-2.5 px-4 border border-slate-200 rounded-lg text-sm font-medium text-slate-700 bg-white hover:bg-slate-50 hover:border-slate-300 transition-all duration-150 shadow-sm"
+            >
+              {/* Official Microsoft Windows logo */}
+              <svg width="18" height="18" viewBox="0 0 21 21" xmlns="http://www.w3.org/2000/svg">
+                <rect x="1"  y="1"  width="9" height="9" fill="#F25022"/>
+                <rect x="11" y="1"  width="9" height="9" fill="#7FBA00"/>
+                <rect x="1"  y="11" width="9" height="9" fill="#00A4EF"/>
+                <rect x="11" y="11" width="9" height="9" fill="#FFB900"/>
+              </svg>
+              Continue with Microsoft
+            </button>
+          </div>
 
           {/* Divider */}
           <div className="relative mb-6">
