@@ -1,30 +1,44 @@
 import { useEffect, useState } from "react"
 import { useNavigate } from "react-router-dom"
+import { api } from "../api/auth"
 import { getStats, syncCalendar, syncOutlookCalendar } from "../api/meetings"
 
 export default function DashboardPage() {
   const [stats, setStats] = useState(null)
+  const [loading, setLoading] = useState(true)
+
+  // Google Calendar state
+  const [googleConnected, setGoogleConnected] = useState(false)
   const [syncing, setSyncing] = useState(false)
   const [syncMsg, setSyncMsg] = useState("")
+
+  // Microsoft / Outlook state
+  const [msConnected, setMsConnected] = useState(false)
   const [syncingOutlook, setSyncingOutlook] = useState(false)
   const [outlookMsg, setOutlookMsg] = useState("")
-  const [loading, setLoading] = useState(true)
+
   const navigate = useNavigate()
   const user = JSON.parse(localStorage.getItem("user") || "{}")
 
   useEffect(() => {
-    getStats()
-      .then(setStats)
-      .catch(console.error)
-      .finally(() => setLoading(false))
+    // Load stats + both connection statuses in parallel
+    Promise.all([
+      getStats().catch(() => null),
+      api.get("/calendar/status").catch(() => null),
+      api.get("/calendar/microsoft/status").catch(() => null),
+    ]).then(([statsData, googleStatus, msStatus]) => {
+      if (statsData) setStats(statsData)
+      if (googleStatus) setGoogleConnected(googleStatus.data?.connected ?? false)
+      if (msStatus) setMsConnected(msStatus.data?.connected ?? false)
+    }).finally(() => setLoading(false))
   }, [])
 
-  const handleSync = async () => {
+  const handleGoogleSync = async () => {
     setSyncing(true)
     setSyncMsg("")
     try {
       const res = await syncCalendar()
-      setSyncMsg(res.message || "Calendar synced successfully!")
+      setSyncMsg(res.message || "Google Calendar synced!")
       const updated = await getStats()
       setStats(updated)
     } catch {
@@ -43,14 +57,8 @@ export default function DashboardPage() {
       const updated = await getStats()
       setStats(updated)
     } catch (err) {
-      const msg = err?.response?.data?.message || "Outlook sync failed."
-      if (msg.includes("No Microsoft account")) {
-        setOutlookMsg("No Microsoft account connected. Please sign in with Microsoft first.")
-      } else if (msg.includes("expired")) {
-        setOutlookMsg("Microsoft session expired. Please sign out and sign in with Microsoft again.")
-      } else {
-        setOutlookMsg(msg)
-      }
+      const msg = err?.response?.data?.message || err?.response?.data?.error || "Outlook sync failed."
+      setOutlookMsg(msg)
     } finally {
       setSyncingOutlook(false)
     }
@@ -60,7 +68,7 @@ export default function DashboardPage() {
     {
       label: "Total Meetings",
       value: stats?.totalMeetings ?? "—",
-      sub: "synced from Google Calendar",
+      sub: "synced from your calendars",
       icon: (
         <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
@@ -70,7 +78,9 @@ export default function DashboardPage() {
     },
     {
       label: "Total Cost",
-      value: stats ? `$${Number(stats.totalCost ?? 0).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : "—",
+      value: stats
+        ? `$${Number(stats.totalCost ?? 0).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+        : "—",
       sub: "estimated across all meetings",
       icon: (
         <svg className="w-5 h-5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -137,39 +147,67 @@ export default function DashboardPage() {
           ))}
         </div>
 
-        {/* Action cards */}
+        {/* Calendar cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mb-8">
 
-          {/* Sync card */}
+          {/* Google Calendar card */}
           <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm">
             <div className="flex items-start gap-4">
               <div className="w-10 h-10 bg-blue-50 rounded-xl flex items-center justify-center shrink-0">
-                <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                {/* Google "G" logo colours */}
+                <svg width="20" height="20" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+                  <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+                  <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/>
+                  <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
                 </svg>
               </div>
               <div className="flex-1 min-w-0">
-                <h3 className="font-semibold text-slate-900 text-sm mb-1">Sync Google Calendar</h3>
+                <div className="flex items-center gap-2 mb-1">
+                  <h3 className="font-semibold text-slate-900 text-sm">Google Calendar</h3>
+                  {!loading && (
+                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                      googleConnected
+                        ? "bg-emerald-50 text-emerald-600"
+                        : "bg-slate-100 text-slate-500"
+                    }`}>
+                      {googleConnected ? "Connected" : "Not connected"}
+                    </span>
+                  )}
+                </div>
                 <p className="text-xs text-slate-500 leading-relaxed mb-4">
-                  Pull your latest meetings from Google Calendar and calculate the real cost of each one.
+                  {googleConnected
+                    ? "Pull your latest meetings and calculate the real cost of each one."
+                    : "Connect your Google account to sync meetings and costs."}
                 </p>
-                <button
-                  onClick={handleSync}
-                  disabled={syncing}
-                  className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white text-xs font-medium rounded-lg transition-colors duration-150"
-                >
-                  {syncing ? (
-                    <>
-                      <svg className="animate-spin h-3.5 w-3.5" fill="none" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
-                      </svg>
-                      Syncing...
-                    </>
-                  ) : "Sync Now"}
-                </button>
+
+                {googleConnected ? (
+                  <button
+                    onClick={handleGoogleSync}
+                    disabled={syncing}
+                    className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white text-xs font-medium rounded-lg transition-colors duration-150"
+                  >
+                    {syncing ? (
+                      <>
+                        <svg className="animate-spin h-3.5 w-3.5" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+                        </svg>
+                        Syncing...
+                      </>
+                    ) : "Sync Now"}
+                  </button>
+                ) : (
+                  <a
+                    href={`${import.meta.env.VITE_API_URL?.replace("/api", "")}/oauth2/authorization/google`}
+                    className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium rounded-lg transition-colors duration-150"
+                  >
+                    Connect Google
+                  </a>
+                )}
+
                 {syncMsg && (
-                  <p className={`text-xs mt-3 ${syncMsg.includes("failed") ? "text-red-500" : "text-emerald-600"}`}>
+                  <p className={`text-xs mt-3 ${syncMsg.includes("failed") || syncMsg.includes("error") ? "text-red-500" : "text-emerald-600"}`}>
                     {syncMsg}
                   </p>
                 )}
@@ -177,7 +215,7 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          {/* Outlook sync card */}
+          {/* Outlook / Microsoft card */}
           <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm">
             <div className="flex items-start gap-4">
               <div className="w-10 h-10 bg-slate-50 rounded-xl flex items-center justify-center shrink-0">
@@ -190,25 +228,49 @@ export default function DashboardPage() {
                 </svg>
               </div>
               <div className="flex-1 min-w-0">
-                <h3 className="font-semibold text-slate-900 text-sm mb-1">Sync Outlook Calendar</h3>
+                <div className="flex items-center gap-2 mb-1">
+                  <h3 className="font-semibold text-slate-900 text-sm">Outlook Calendar</h3>
+                  {!loading && (
+                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                      msConnected
+                        ? "bg-emerald-50 text-emerald-600"
+                        : "bg-slate-100 text-slate-500"
+                    }`}>
+                      {msConnected ? "Connected" : "Not connected"}
+                    </span>
+                  )}
+                </div>
                 <p className="text-xs text-slate-500 leading-relaxed mb-4">
-                  Pull meetings from Microsoft Outlook / Microsoft 365 via your connected Microsoft account.
+                  {msConnected
+                    ? "Pull meetings from Microsoft Outlook / Microsoft 365."
+                    : "Connect your Microsoft account to sync Outlook meetings."}
                 </p>
-                <button
-                  onClick={handleOutlookSync}
-                  disabled={syncingOutlook}
-                  className="inline-flex items-center gap-2 px-4 py-2 bg-slate-700 hover:bg-slate-800 disabled:bg-slate-400 text-white text-xs font-medium rounded-lg transition-colors duration-150"
-                >
-                  {syncingOutlook ? (
-                    <>
-                      <svg className="animate-spin h-3.5 w-3.5" fill="none" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
-                      </svg>
-                      Syncing Outlook...
-                    </>
-                  ) : "Sync Outlook"}
-                </button>
+
+                {msConnected ? (
+                  <button
+                    onClick={handleOutlookSync}
+                    disabled={syncingOutlook}
+                    className="inline-flex items-center gap-2 px-4 py-2 bg-slate-700 hover:bg-slate-800 disabled:bg-slate-400 text-white text-xs font-medium rounded-lg transition-colors duration-150"
+                  >
+                    {syncingOutlook ? (
+                      <>
+                        <svg className="animate-spin h-3.5 w-3.5" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+                        </svg>
+                        Syncing...
+                      </>
+                    ) : "Sync Outlook"}
+                  </button>
+                ) : (
+                  <a
+                    href={`${import.meta.env.VITE_API_URL?.replace("/api", "")}/oauth2/authorization/microsoft`}
+                    className="inline-flex items-center gap-2 px-4 py-2 bg-slate-700 hover:bg-slate-800 text-white text-xs font-medium rounded-lg transition-colors duration-150"
+                  >
+                    Connect Microsoft
+                  </a>
+                )}
+
                 {outlookMsg && (
                   <p className={`text-xs mt-3 leading-relaxed ${
                     outlookMsg.includes("failed") || outlookMsg.includes("expired") || outlookMsg.includes("No Microsoft")
