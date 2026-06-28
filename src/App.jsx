@@ -6,7 +6,8 @@ import MeetingsPage  from './pages/MeetingsPage'
 import TickerPage    from './pages/TickerPage'
 import PrivateRoute  from './components/PrivateRoute'
 import Navbar        from './components/Navbar'
-import LandingPage from "./pages/LandingPage"
+import LandingPage   from './pages/LandingPage'
+
 function OAuthCallback() {
   const navigate = useNavigate()
   const location = useLocation()
@@ -39,13 +40,13 @@ export default function App() {
   return (
     <BrowserRouter>
       <Routes>
+        <Route path="/"                element={<LandingPage />} />
         <Route path="/login"           element={<LoginPage />} />
-        <Route path="/landing page"    element={<LandingPage />} />
         <Route path="/oauth2/callback" element={<OAuthCallback />} />
         <Route path="/dashboard"       element={<PrivateRoute><AuthLayout><DashboardPage /></AuthLayout></PrivateRoute>} />
         <Route path="/meetings"        element={<PrivateRoute><AuthLayout><MeetingsPage /></AuthLayout></PrivateRoute>} />
         <Route path="/ticker"          element={<PrivateRoute><AuthLayout><TickerPage /></AuthLayout></PrivateRoute>} />
-        <Route path="*"               element={<Navigate to="/dashboard" replace />} />
+        <Route path="*"               element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>
   )
